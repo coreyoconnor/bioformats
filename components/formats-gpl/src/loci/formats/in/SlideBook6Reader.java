@@ -49,7 +49,7 @@ import ome.units.quantity.Time;
 import ome.units.UNITS;
 
 import org.scijava.nativelib.NativeLibraryUtil;
-import org.scijava.nativelib.NativeLibraryUtil.Architecture.*;
+import static org.scijava.nativelib.NativeLibraryUtil.*;
 
 /**
  * SlideBook6Reader is a file format reader for 3i SlideBook SLD files that uses
@@ -82,28 +82,37 @@ public class SlideBook6Reader  extends FormatReader {
 
   private static boolean libraryFound = false;
 
+  // TODO: Add linux architecture libraries
+  public static boolean isSupportedArch(final Architecture arch) {
+    switch(arch) {
+    case WINDOWS_32:
+    case WINDOWS_64:
+    case OSX_32:
+    case OSX_64:
+      return true;
+    }
+    return false;
+  }
 
   static {
-    try {
-      // load JNI wrapper of SBReadFile.dll
-      NativeLibraryUtil.Architecture arch = NativeLibraryUtil.getArchitecture();
-      if (arch != NativeLibraryUtil.Architecture.WINDOWS_64
-          && arch != NativeLibraryUtil.Architecture.WINDOWS_32) {
-        // TODO: add compiled linux architecture libraries to class
-        throw new UnsatisfiedLinkError();
-      }
-      if (!libraryFound) {
+    final NativeLibraryUtil.Architecture arch = NativeLibraryUtil.getArchitecture();
+    if (!isSupportedArch(arch)) {
+      libraryFound = false;
+    } else {
+      try {
+        // load JNI wrapper from
+        // Windows - SlideBook6Reader.dll
+        // OS X - libSlideBook6Reader.dylib
         libraryFound = NativeLibraryUtil.loadNativeLibrary(SlideBook6Reader.class, "SlideBook6Reader");
       }
-    }
-    catch (UnsatisfiedLinkError e) {
-      // log level debug, otherwise a warning will be printed every time a file is initialized without the .dll present
-      LOGGER.debug(NO_3I_MSG, e);
-      libraryFound = false;
-    }
-    catch (SecurityException e) {
-      LOGGER.warn("Insufficient permission to load native library", e);
-      libraryFound = false;
+      catch (UnsatisfiedLinkError e) {
+        LOGGER.warn(NO_3I_MSG, e);
+        libraryFound = false;
+      }
+      catch (SecurityException e) {
+        LOGGER.warn("Insufficient permission to load native library", e);
+        libraryFound = false;
+      }
     }
   }
 
